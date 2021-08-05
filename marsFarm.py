@@ -21,14 +21,8 @@ pump = atlas_i2c.AtlasI2C()
 pump.set_i2c_address(104)
 pump2 = atlas_i2c.AtlasI2C()
 pump2.set_i2c_address(105)
-pump3 = atlas_i2c.AtlasI2C()
-pump3.set_i2c_address(106)
-pump4 = atlas_i2c.AtlasI2C()
-pump4.set_i2c_address(103)
 
-username = "CS_CSH"
-key = "aio_ZqdK70vqX2K4b5JrDHm6ToaZ8Y0Y"
-aio = Client(username,key)
+aio = Client("CS_CSH","aio_ZqdK70vqX2K4b5JrDHm6ToaZ8Y0Y")
 
 # pump.write("I2C,11")
 
@@ -46,139 +40,125 @@ humidOut = aio.feeds('plantcoders.humidity')
 pumpButton = aio.feeds('plantcoders.pumpbutton')
 pumpButton2 = aio.feeds('plantcoders.pumpbuttontwo')
 pumpAmountAda2 = aio.feeds('plantcoders.pumpamounttwo')
-pumpButton3 = aio.feeds('plantcoders.pumpbutton3')
-pumpButton4 = aio.feeds('plantcoders.pumpbutton4')
-pumpAmountAda3 = aio.feeds('plantcoders.pumpamountthree')
-pumpAmountAda4 = aio.feeds('plantcoders.pumpamountfour')
+
+def send(feed, data):
+    try:
+        aio.send(feed, data)
+    except:
+        print("Failed to send data to feed:", str(feed))
+        
+def get(feed):
+    try:
+        return aio.receive(feed)
+    except:
+        print("Failed to get data from feed:", str(feed))
 
 def getHumidSens():
-    humidSens.query("O,T,1", processing_delay = 1500)
-    humidSens.query("O,Dew,1", processing_delay = 1500)
-    humidLis = humidSens.query("R", processing_delay = 1500)
-    print(humidLis)
     try:
+        humidSens.query("O,T,1", processing_delay = 1500)
+        humidSens.query("O,Dew,1", processing_delay = 1500)
+        humidLis = humidSens.query("R", processing_delay = 1500)
         humidLis = humidLis.data.decode("utf-8").split(",")
         humidLis.append(humidLis[1])
         humidLis[4] = float(humidLis[4])
         humidLis[4] = humidLis[4] * 9/5 + 32
         humidLis[4] = str(humidLis[4])
-        return humidLis
+        return humidLis    
     except:
-        print("utf-8 decode error")
-#     try:
-#     except:
-#         print("humid list error")
-   
+        print("Humidity Reading Failed")
 
 def getTemp():
-    temReadC = temSens.query("R", processing_delay = 1000)
-    temReadC = temReadC.data.decode("utf-8")
-    temReadF = float(temReadC)
-    temReadF = temReadF  * 9/5 + 32
-    temReadF = str(temReadF)
-    return temReadC, temReadF
+    try:
+        temReadC = temSens.query("R", processing_delay = 1000)
+        temReadC = temReadC.data.decode("utf-8")
+        temReadF = float(temReadC)
+        temReadF = temReadF  * 9/5 + 32
+        temReadF = str(temReadF)
+        return temReadC, temReadF
+    except:
+        print("Temperature Redng Failed")
 
 def getPH():
-    phRead = phSens.query("R", processing_delay = 1000)
-    phRead = phRead.data.decode("utf-8")
-    return phRead
-    
+    try:
+        phRead = phSens.query("R", processing_delay = 1000)
+        phRead = phRead.data.decode("utf-8")
+        return phRead
+    except:
+        print("PH Reading Failed")
+        
 def getEC():
-    ecRead = ecSens.query("R", processing_delay = 1000)
-    ecRead = ecRead.data.decode("utf-8")
-    ecRead = float(ecRead)
-    ecRead = ecRead / 1000
-    ecRead = str(ecRead)
-    return ecRead
+    try:
+        ecRead = ecSens.query("R", processing_delay = 1000)
+        ecRead = ecRead.data.decode("utf-8")
+        ecRead = float(ecRead)
+        ecRead = ecRead / 1000
+        ecRead = str(ecRead)
+        return ecRead
+    except:
+        print("EC Reading Failed")
 
 def takePic():
-    global pics
-    pics = 0
-    cam.resolution = (280, 200)
-    cam.capture("/home/pistudent-21/Documents/summer research 21/gardenImages/image.jpg")
-    pics = pics + 1
-    print("pics taken")
-    sleep(.1)
-    with open("/home/pistudent-21/Documents/summer research 21/gardenImages/image.jpg", "rb") as imageFile:
-        image = base64.b64encode(imageFile.read())
-        sendStr = image.decode("utf-8")
-        try:
-            aio.send(cameraOut.key, sendStr)
-        except:
-            print("image send failed")
-
-while True:
-#     pump2.write("D," + "-2")
     try:
-        pumpAmount = aio.receive(autoPumpAda.key).value
+        global pics
+        pics = 0
+        cam.resolution = (280, 200)
+        cam.capture("/home/pistudent-03/Documents/image.jpg")
+        pics = pics + 1
+        print("pics taken")
+        sleep(.1)
+        with open("/home/pistudent-03/Documents/image.jpg", "rb") as imageFile:
+            image = base64.b64encode(imageFile.read())
+            sendStr = image.decode("utf-8")
+            send(cameraOut.key, sendStr)    
     except:
-        sleep(60)
-    takePic()
-    sleep(5)
+        print("Failed to take picture")
     
-    pumpAmount = aio.receive(pumpAmountAda.key).value
-    pumpAmount2 = aio.receive(pumpAmountAda2.key).value
-    pumpAmount3 = aio.receive(pumpAmountAda3.key).value
-    pumpAmount4 = aio.receive(pumpAmountAda4.key).value
-    print(pumpAmount2)
-    if aio.receive(pumpButton.key).value == "ON":
-        pump.write("D," + pumpAmount)
-        aio.send(pumpButton.key, "OFF")
-    if aio.receive(pumpButton2.key).value == "ON":
-        print("test")
-        pump2.write("D," + pumpAmount2)
-        aio.send(pumpButton2.key, "OFF")
-#     pumpAmount = aio.receive(pumpAmountAda.key).value
-    if aio.receive(pumpButton3.key).value == "ON":
-        print("test3 " + pumpAmount4)
-        pump3.write("D," + pumpAmount3)
-        aio.send(pumpButton3.key, "OFF")
-    if aio.receive(pumpButton4.key).value == "ON":
-        print("test4 " + pumpAmount4)
-        pump4.write("D," + pumpAmount4)
-        aio.send(pumpButton4.key, "OFF")
-    autoPump = aio.receive(autoPumpAda.key).value
-    print(autoPump)
-#     pump.write("x")   
-    phReading = getPH()
-    print("ph:", phReading)
-    aio.send(phOut.key, phReading)
-    ecReading = getEC()
-    print("ec:", ecReading)
-    aio.send(ecOut.key, ecReading)
-    if float(ecReading) < .2:
-        print("EC is less than 1... water level may be low")
-        aio.send(waterLevelBool.key, 0)
-        if autoPump == "ON":
-            pump.write("D,100")
-            autoPump = "OFF";
-            while float(getEC()) < 1:
-                pump.write("D,10")
-    else:
-        aio.send(waterLevelBool.key, 1)
-    tempList  = getTemp()
-    print("temp C:", tempList [0])
-    print("temp F:", tempList[1])
-    aio.send(waterTempCel.key, tempList[0])
-    aio.send(waterTempFar.key, tempList[1])
-    humidList = getHumidSens()
+while True:
     try:
-        print("Humid:", humidList[0])
-        print("Air Temp C:", humidList[1])
-        print("Air Temp F:", humidList[4])
-        print("Dew Point:", humidList[3])
-    except:
-        print("humid list error")
-    try:
-        aio.send(humidOut.key, humidList[0])
-        aio.send(airTempCOut.key, humidList[1])
-        aio.send(airTempFOut.key, humidList[4])
-    except:
-        print("humid list problem")
-    mins = mins + 1
-    if mins == 30:
+        pumpAmount = get(autoPumpAda.key).value
         takePic()
-        mins = 0
-    sleep(120)
-
-   
+        sleep(5)
+        
+        pumpAmount = get(pumpAmountAda.key).value
+        pumpAmount2 = get(pumpAmountAda2.key).value
+        print(pumpAmount2)
+        if get(pumpButton.key).value == "ON":
+            pump.write("D," + pumpAmount)
+            send(pumpButton.key, "OFF")
+        if get(pumpButton2.key).value == "ON":
+            pump2.write("D," + pumpAmount2)
+            send(pumpButton2.key, "OFF")
+        autoPump = aio.receive(autoPumpAda.key).value
+        
+        phReading = getPH()
+        print("ph:", phReading)
+        send(phOut.key, phReading)
+        ecReading = getEC()
+        print("ec:", ecReading)
+        send(ecOut.key, ecReading)
+        tempList  = getTemp()
+        print("temp C:", tempList [0])
+        print("temp F:", tempList[1])
+        send(waterTempCel.key, tempList[0])
+        send(waterTempFar.key, tempList[1])
+        humidList = getHumidSens()
+        try:
+            print("Humid:", humidList[0])
+            print("Air Temp C:", humidList[1])
+            print("Air Temp F:", humidList[4])
+            print("Dew Point:", humidList[3])
+        except:
+            print("humid list error")
+        try:
+            send(humidOut.key, humidList[0])
+            send(airTempCOut.key, humidList[1])
+            send(airTempFOut.key, humidList[4])
+        except:
+            print("humid list problem")
+        mins = mins + 1
+        if mins == 30:
+            takePic()
+            mins = 0
+        sleep(60)
+    except:
+        print("Loop error")
