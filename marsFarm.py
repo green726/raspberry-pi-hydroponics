@@ -1,31 +1,54 @@
-auto = False
-pi = 21
+auto = True
+pi = '03'
+
+loopTime = 10 # In mins
+optimalRanges = {
+    "ph": {"top": 6.2, "bottom": 5.4},
+    "ec": {"top": 1.6, "bottom": .8}
+}
+
+addresses = {
+    "phSense": 0x63,
+    "ecSense": 0x64,
+    "tempSense": 0x66,
+    "humidSense": 0x6f,
+    "nutrientsIn": 0x05,
+    "waterIn": 0x06,
+    "waterOut": 0x16,
+    "phUp": 0x07,
+    "phDown": 0x17
+}
 
 from atlas_i2c import atlas_i2c
-from time import sleep
+from time import sleep, time
 from picamera import PiCamera, Color
 from Adafruit_IO import Client, Feed
+from datetime import datetime, date
 import base64
 # ph down 106, ph up 103
 
-cam = PiCamera()
+# cam = PiCamera()
 
 # Makes it take the first pic after 2.5mins 
 mins = 25
 
 # autoPump = True
-phSens = atlas_i2c.AtlasI2C()
-phSens.set_i2c_address(99)
-ecSens = atlas_i2c.AtlasI2C()
-ecSens.set_i2c_address(100)
-temSens = atlas_i2c.AtlasI2C()
-temSens.set_i2c_address(102)
-humidSens = atlas_i2c.AtlasI2C()
-humidSens.set_i2c_address(111)
-pump = atlas_i2c.AtlasI2C()
-pump.set_i2c_address(103)
-pump2 = atlas_i2c.AtlasI2C()
-pump2.set_i2c_address(106)
+phSens = atlas_i2c.AtlasI2C(addresses["phSense"])
+ecSens = atlas_i2c.AtlasI2C(addresses["ecSense"])
+temSens = atlas_i2c.AtlasI2C(addresses["tempSense"])
+humidSens = atlas_i2c.AtlasI2C(addresses["humidSense"])
+
+#Creates all of the pump vars and makes them None (python null)
+nutrientsIn=waterIn=waterOut=phUp=phDown=None
+lastpHDose=lastECDose=0
+
+if auto:
+    nutrientsIn = atlas_i2c.AtlasI2C(addresses["nutrientsIn"])
+    waterIn = atlas_i2c.AtlasI2C(addresses["waterIn"])
+    waterOut = atlas_i2c.AtlasI2C(addresses["waterOut"])
+    phUp = atlas_i2c.AtlasI2C(addresses["phUp"])
+    phDown = atlas_i2c.AtlasI2C(addresses["phDown"])
+
 
 aio = Client("CS_CSH","aio_ZqdK70vqX2K4b5JrDHm6ToaZ8Y0Y")
 
@@ -64,11 +87,13 @@ def getHumidSens():
         humidSens.query("O,T,1", processing_delay = 1500)
         humidSens.query("O,Dew,1", processing_delay = 1500)
         humidLis = humidSens.query("R", processing_delay = 1500)
-        humid, airTempC, _, dewPoint = humidLis.data.decode("utf-8").split(",")
-        airTempF = float(humidLis[4]) * 9/5 + 32
-        return humid, airTempC, airTempF, dewPoint
-    except:
+        humList = humidLis.data.decode("utf-8").split(",")
+        #0: Humidity, 1: airTempC, 3: Dew Point
+        airTempF = float(humList[1]) * 9/5 + 32
+        return humList[0], humList[1], airTempF, humList[3]
+    except Exception as e:
         print("Humidity Reading Failed")
+        print(e)
 
 def getTemp():
     try:
@@ -76,8 +101,8 @@ def getTemp():
         temReadC = temReadC.data.decode("utf-8")
         temReadF = float(temReadC) * 9/5 + 32
         return temReadC, temReadF
-    except:
-        print("Temperature Redng Failed")
+    except Exptio:
+        print("Temperature Reading Failed")
 
 def getPH():
     try:
@@ -129,6 +154,7 @@ while True:
         
         humid, airTempC, airTempF, dewPoint = getHumidSens()
         print("Humid:", humid)
+        
         print("Air Temp C:", airTempC)
         print("Air Temp F:", airTempF)
         print("Dew Point:", dewPoint)
@@ -136,16 +162,42 @@ while True:
         send(airTempCOut.key, airTempC)
         send(airTempFOut.key, airTempF)
             
-        mins = mins + 1
-        if mins == 30:
-            try:
-                takePic()
-                mins = 0
-                print("Took picture")
-            except:
-                print("Failed to take picture")
-                mins = 25
-        sleep(30)
-    except:
-        print("Loop failed")
+#         mins = mins + 1
+#         if mins == 30:
+#             try:
+#                 takePic()
+#                 mins = 0
+#                 print("Took picture")
+#             except:
+#                 print("Failed to take picture")
+#                 mins = 25
+        
+        if auto:
+            currentTime = time()
+            
+            currentTimeStr = datetime.now().strftime("%H:%M")
+            currentDay = date.today()
+            
+            if float(phReading) > optimalRanges["ph"]["top"] and currentTime - lastpHDose >= loopTime * 60:
+                print("pH Down " + str(currentDay) + " " + str(currentTimeStr))
+                phDown.write("D,2")
+                lastpHDose = currentTime
+            elif float(phReading) < optimalRanges["ph"]["bottom"] and currentTime - lastpHDose >= loopTime * 60:
+                print("pH Up " + str(currentDay) + " " + str(currentTimeStr))
+                phUp.write("D,5")
+                lastpHDose = currentTime
+            if float(ecReading) > optimalRanges["ec"]["top"] and currentTime - lastECDose >= loopTime * 60:
+                print("Ec Down " + str(currentDay) + " " + str(currentTimeStr))
+                waterOut.write("D,-5")
+                sleep(5)
+                waterIn.write("D,5")
+                lastECDose = currentTime
+            elif float(ecReading) < optimalRanges["ec"]["bottom"] and currentTime - lastECDose >= loopTime * 60:
+                print("Ec Up " + str(currentDay) + " " + str(currentTimeStr))
+                nutrientsIn.write("D,5")
+                lastECDose = currentTime
+        sleep(10)
+    except Exception as e:
+        print("Loop failed with error: " + str(e))
         sleep(5)
+ 
