@@ -21,10 +21,9 @@ humidSens.set_i2c_address(111)
 pump = atlas_i2c.AtlasI2C()
 pump.set_i2c_address(103)
 
-username = "CS_CSH"
-key = "aio_Wiou23EKMqpJaz5KPYuujWzKvwV8"
+username = "account"
+key = "key"
 aio = Client(username,key)
-print("test")
 # pump.write("I2C,11")
 
 phOut = aio.feeds('other1.ph')

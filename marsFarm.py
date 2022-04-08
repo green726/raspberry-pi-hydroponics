@@ -50,7 +50,7 @@ if auto:
     phDown = atlas_i2c.AtlasI2C(addresses["phDown"])
 
 
-aio = Client("CS_CSH","aio_ZqdK70vqX2K4b5JrDHm6ToaZ8Y0Y")
+aio = Client("account","key")
 
 # pump.write("I2C,11")
 
