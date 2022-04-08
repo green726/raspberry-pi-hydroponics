@@ -27,16 +27,8 @@ addresses = {
 
 from atlas_i2c import atlas_i2c
 from time import sleep, time
-from picamera import PiCamera, Color
-from Adafruit_IO import Client, Feeds
+from Adafruit_IO import Client
 from datetime import datetime, date
-import base64
-# ph down 106, ph up 103
-
-# cam = PiCamera()
-
-# Makes it take the first pic after 2.5mins
-mins = 25
 
 # autoPump = True
 phSens = atlas_i2c.AtlasI2C(addresses["phSense"])
@@ -133,23 +125,6 @@ def getEC():
         print("EC Reading Failed")
 
 
-def takePic():
-    try:
-        global pics
-        pics = 0
-        cam.resolution = (250, 200)
-        cam.capture(f"/home/pistudent-{pi}/Documents/image.jpg")
-        pics = pics + 1
-        sleep(.1)
-        with open(f"/home/pistudent-{pi}/Documents/image.jpg",
-                  "rb") as imageFile:
-            image = base64.b64encode(imageFile.read())
-            sendStr = image.decode("utf-8")
-            send(cameraOut.key, sendStr)
-    except:
-        print("Failed to take picture")
-
-
 while True:
     try:
         phReading = getPH()
@@ -175,16 +150,6 @@ while True:
         send(humidOut.key, humid)
         send(airTempCOut.key, airTempC)
         send(airTempFOut.key, airTempF)
-
-        #         mins = mins + 1
-        #         if mins == 30:
-        #             try:
-        #                 takePic()
-        #                 mins = 0
-        #                 print("Took picture")
-        #             except:
-        #                 print("Failed to take picture")
-        #                 mins = 25
 
         if auto:
             currentTime = time()
