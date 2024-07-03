@@ -1,4 +1,4 @@
-auto = True
+auto = False
 pi = '03'
 
 loopTime = 10  # In mins
@@ -47,25 +47,25 @@ if auto:
     phUp = atlas_i2c.AtlasI2C(addresses["phUp"])
     phDown = atlas_i2c.AtlasI2C(addresses["phDown"])
 
-aio = Client("account", "key")
+# aio = Client("account", "key")
 
 # pump.write("I2C,11")
 
-farm = pi == 21 and 'plantcoders' or 'other1'
-phOut = aio.feeds(farm + '.ph')
-pumpAmountAda = aio.feeds(farm + '.pumpamount')
-airTempCOut = aio.feeds(farm + '.airtempcelcius')
-airTempFOut = aio.feeds(farm + '.airtempfar')
-autoPumpAda = aio.feeds(farm + '.auto-pump')
-waterLevelBool = aio.feeds(farm + '.waterlevelbool')
-waterTempCel = aio.feeds(farm + '.watertempcel')
-waterTempFar = aio.feeds(farm + '.watertempfar')
-cameraOut = aio.feeds(farm + '.camera')
-ecOut = aio.feeds(farm + '.ec')
-humidOut = aio.feeds(farm + '.humidity')
-pumpButton = aio.feeds(farm + '.pumpbutton')
-pumpButton2 = aio.feeds(farm + '.pumpbuttontwo')
-pumpAmountAda2 = aio.feeds(farm + '.pumpamounttwo')
+# farm = pi == 21 and 'plantcoders' or 'other1'
+# phOut = aio.feeds(farm + '.ph')
+# pumpAmountAda = aio.feeds(farm + '.pumpamount')
+# airTempCOut = aio.feeds(farm + '.airtempcelcius')
+# airTempFOut = aio.feeds(farm + '.airtempfar')
+# autoPumpAda = aio.feeds(farm + '.auto-pump')
+# waterLevelBool = aio.feeds(farm + '.waterlevelbool')
+# waterTempCel = aio.feeds(farm + '.watertempcel')
+# waterTempFar = aio.feeds(farm + '.watertempfar')
+# cameraOut = aio.feeds(farm + '.camera')
+# ecOut = aio.feeds(farm + '.ec')
+# humidOut = aio.feeds(farm + '.humidity')
+# pumpButton = aio.feeds(farm + '.pumpbutton')
+# pumpButton2 = aio.feeds(farm + '.pumpbuttontwo')
+# pumpAmountAda2 = aio.feeds(farm + '.pumpamounttwo')
 
 
 def send(feed, data):
@@ -129,17 +129,17 @@ while True:
     try:
         phReading = getPH()
         print("ph:", phReading)
-        send(phOut.key, phReading)
+        # send(phOut.key, phReading)
 
         ecReading = getEC()
         print("ec:", ecReading)
-        send(ecOut.key, ecReading)
+        # send(ecOut.key, ecReading)
 
         tempC, tempF = getTemp()
         print("temp C:", tempC)
         print("temp F:", tempF)
-        send(waterTempCel.key, tempC)
-        send(waterTempFar.key, tempF)
+        # send(waterTempCel.key, tempC)
+        # send(waterTempFar.key, tempF)
 
         humid, airTempC, airTempF, dewPoint = getHumidSens()
         print("Humid:", humid)
@@ -147,9 +147,9 @@ while True:
         print("Air Temp C:", airTempC)
         print("Air Temp F:", airTempF)
         print("Dew Point:", dewPoint)
-        send(humidOut.key, humid)
-        send(airTempCOut.key, airTempC)
-        send(airTempFOut.key, airTempF)
+        # send(humidOut.key, humid)
+        # send(airTempCOut.key, airTempC)
+        # send(airTempFOut.key, airTempF)
 
         if auto:
             currentTime = time()
