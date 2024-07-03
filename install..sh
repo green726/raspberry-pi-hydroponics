@@ -1,0 +1,1 @@
+pip install Adafruit_IO atlas_i2c --break-system-packages
